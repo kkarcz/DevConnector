@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('config');
 const { check, validationResult } = require('express-validator');
 
 const User = require('../models/User');
@@ -52,14 +54,42 @@ router.post(
       user.password = await bcrypt.hash(password, salt);
       await user.save();
 
-      // Return jsonwebtoken
+      const payload = {
+        user: {
+          id: user.id
+        }
+      };
 
-      res.send('User registered');
+      jwt.sign(
+        payload,
+        config.get('jwtSecret'),
+        { expiresIn: 360000 },
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
+        }
+      );
     } catch (err) {
       console.log(err.message);
       res.status(500).send('Server error');
     }
   }
 );
+
+// router.delete('/remove-user', async (req, res) => {
+//   const { email } = req.body;
+
+//   try {
+//     let user = await User.findOne({ email });
+//     if (user) {
+//       await User.findOneAndDelete({ email });
+//       return res.status(200).json('User deleted');
+//     }
+//     return res.status(400).json('User not exist');
+//   } catch {
+//     console.log(err.message);
+//     res.status(500).send('Server error');
+//   }
+// });
 
 module.exports = router;
